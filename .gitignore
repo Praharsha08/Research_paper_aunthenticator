@@ -1,0 +1,19 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+ENV/
+env/
+.env
+.venv
+
+# Backup and log files
+*.bak
+*.tmp
+*.log
+
+# Streamlit configuration and run cache
+.streamlit/
