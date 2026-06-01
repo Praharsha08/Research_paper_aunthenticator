@@ -1,3 +1,15 @@
+---
+title: Research Paper Quality Analyzer
+emoji: 📚
+colorFrom: blue
+colorTo: indigo
+sdk: streamlit
+sdk_version: 1.30.0
+python_version: "3.11"
+app_file: app.py
+pinned: false
+---
+
 # Research Paper Quality Analyzer & Score Predictor
 
 An ML-powered software system that evaluates the quality of research papers. The system leverages LightGBM regressor ensembles, dense SentenceTransformer text embeddings, and SHAP explainability to predict quality scores and provide local feature attributions.
