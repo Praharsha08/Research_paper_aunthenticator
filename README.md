@@ -2,9 +2,9 @@
 title: Research Paper Quality Analyzer
 emoji: 📚
 colorFrom: blue
-colorTo: indigo
+colorTo: green
 sdk: streamlit
-sdk_version: 1.30.0
+sdk_version: "1.45.1"
 python_version: "3.11"
 app_file: app.py
 pinned: false
