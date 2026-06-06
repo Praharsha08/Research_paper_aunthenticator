@@ -14,6 +14,23 @@ pinned: false
 
 An ML-powered software system that evaluates the quality of research papers. The system leverages LightGBM regressor ensembles, dense SentenceTransformer text embeddings, and SHAP explainability to predict quality scores and provide local feature attributions.
 
+## 🚀 Key Features
+
+- Upload and analyze research papers in PDF format
+- Predict Overall Quality, Innovation, Methodology, and Impact scores
+- Generate semantic embeddings using Sentence Transformers
+- Recommend similar research papers using cosine similarity
+- Explain predictions with SHAP feature attribution
+- Interactive Streamlit web application
+- Built using ArXiv research paper dataset
+
+# Research Paper Quality Analyzer & Score Predictor
+
+🌐 **Live Demo:** https://huggingface.co/spaces/Praharsha01/Student-project
+
+🔗 **GitHub Repository:** https://github.com/Praharsha08/Student-project
+
+
 ![System Architecture](docs/architecture.png)
 
 ---
