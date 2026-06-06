@@ -30,9 +30,6 @@ An ML-powered software system that evaluates the quality of research papers. The
 
 🔗 **GitHub Repository:** https://github.com/Praharsha08/Student-project
 
-
-![System Architecture](docs/architecture.png)
-
 ---
 
 ## 📌 Problem Statement
@@ -55,6 +52,9 @@ The data flow within the application follows a modular architecture:
 5.  **Multi-Model Regression Ensemble:** Runs the preprocessed features through 4 separate LightGBM regressor models.
 6.  **Local XAI Analysis:** Computes local feature contributions using TreeSHAP, aggregating high-dimensional vector impacts into a single semantic attribute.
 7.  **Semantic Recommendation Search:** Conducts a brute-force cosine similarity nearest-neighbor sweep against a local 181-paper database to display the top 3 similar works.
+
+
+![System Architecture](docs/architecture.png)
 
 ---
 
