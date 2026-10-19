@@ -6,6 +6,7 @@ Uses pre-trained LightGBM regressor models and SentenceTransformer text embeddin
 import datetime
 import json
 import logging
+from pathlib import Path
 import streamlit as st
 
 from src.features import clean_abstract, prepare_features, load_categories
@@ -170,11 +171,110 @@ embedder = load_sentence_transformer()
 # DYNAMIC DATES & CATEGORIES
 db_dataset_path = "data/embeddingdataset.json"
 categories = load_categories(db_dataset_path)
+ANNOTATIONS_PATH = Path("data/annotations.json")
+
+
+def load_annotation_records() -> dict:
+    """Load saved human annotations without changing the source dataset."""
+    if not ANNOTATIONS_PATH.exists():
+        return {}
+    try:
+        with ANNOTATIONS_PATH.open("r", encoding="utf-8") as file:
+            annotations = json.load(file)
+        if not isinstance(annotations, dict):
+            raise ValueError("Annotation file must contain a JSON object.")
+        return annotations
+    except (OSError, json.JSONDecodeError, ValueError) as error:
+        st.error(f"Could not load annotations: {error}")
+        return {}
+
+
+def save_annotation(arxiv_id: str, scores: dict) -> None:
+    """Persist one annotation keyed by the paper's stable ArXiv ID."""
+    annotations = load_annotation_records()
+    annotations[arxiv_id] = scores
+    ANNOTATIONS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with ANNOTATIONS_PATH.open("w", encoding="utf-8") as file:
+        json.dump(annotations, file, indent=2)
+
+
+def render_annotation_screen(records: list) -> None:
+    """Render a manual 1–5 annotation workflow for currently unlabeled papers."""
+    annotations = load_annotation_records()
+    unlabeled_records = [
+        record for record in records
+        if all(record.get(field, 0) == 0 for field in (
+            "manual_score", "novelty_score", "rigor_score", "impact_score"
+        ))
+        and record.get("arxiv_id") not in annotations
+    ]
+
+    st.header("Human Annotation")
+    st.caption(
+        "Score one paper at a time from 1 (lowest) to 5 (highest). "
+        "Annotations are saved separately in data/annotations.json."
+    )
+    if not unlabeled_records:
+        st.success("No unannotated placeholder records remain.")
+        return
+
+    paper_options = {
+        f"{record.get('title', 'Untitled')} ({record.get('arxiv_id', 'unknown')})": record
+        for record in unlabeled_records
+    }
+    selected_label = st.selectbox("Paper to annotate", list(paper_options))
+    paper = paper_options[selected_label]
+
+    st.subheader(paper.get("title", "Untitled"))
+    st.caption(
+        f"Category: {paper.get('primary_category', 'unknown')} | "
+        f"Authors: {paper.get('author_count', 'unknown')} | "
+        f"Abstract length: {paper.get('summary_len', 0)} characters"
+    )
+    with st.expander("Read abstract", expanded=True):
+        st.write(paper.get("summary", "No abstract available."))
+
+    overall = st.slider("Overall quality", 1, 5, 3, key=f"overall_{paper['arxiv_id']}")
+    novelty = st.slider("Novelty", 1, 5, 3, key=f"novelty_{paper['arxiv_id']}")
+    rigor = st.slider("Rigor", 1, 5, 3, key=f"rigor_{paper['arxiv_id']}")
+    impact = st.slider("Impact", 1, 5, 3, key=f"impact_{paper['arxiv_id']}")
+    notes = st.text_area("Optional annotation notes", key=f"notes_{paper['arxiv_id']}")
+
+    if st.button("Save annotation", type="primary"):
+        save_annotation(
+            paper["arxiv_id"],
+            {
+                "arxiv_id": paper["arxiv_id"],
+                "title": paper.get("title", "Untitled"),
+                "overall": overall,
+                "novelty": novelty,
+                "rigor": rigor,
+                "impact": impact,
+                "notes": notes,
+            },
+        )
+        st.success("Annotation saved. Select another paper to continue.")
+        st.rerun()
 
 # MAIN CONTAINER WITH DYNAMIC WIDTH
 col_left, col_center, col_right = st.columns([1, 8, 1])
 
 with col_center:
+    with st.sidebar:
+        app_mode = st.radio(
+            "Application mode",
+            ["Analyze paper", "Annotate dataset"],
+            help="Use Annotate dataset to add verified 1–5 labels to placeholder records.",
+        )
+
+    if app_mode == "Annotate dataset":
+        try:
+            with open(db_dataset_path, "r", encoding="utf-8") as f:
+                render_annotation_screen(json.load(f))
+        except (OSError, json.JSONDecodeError) as error:
+            st.error(f"Could not load annotation dataset: {error}")
+        st.stop()
+
     # SECTION 1: UPLOAD AREA (Directly below subtitle, no empty containers)
     uploaded_file = st.file_uploader("Upload Research Paper (PDF)", type="pdf", label_visibility="visible")
 
