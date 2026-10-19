@@ -13,13 +13,16 @@ import numpy as np
 import pandas as pd
 
 from src.features import build_dataset
+from src.data_validation import DatasetValidationError, is_unlabeled_record, validate_records
+from src.evaluation import create_regressor
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # Paths
-DATASET_PATH = Path("data/embeddingdataset.json")
+DEFAULT_DATASET_PATH = Path("data/embeddingdataset.json")
+ANNOTATED_DATASET_PATH = Path("data/annotated_embeddingdataset.json")
 MODELS_DIR = Path("models")
 
 
@@ -37,16 +40,7 @@ def train_and_evaluate(X: pd.DataFrame, y: np.ndarray, target_name: str) -> lgb.
     """
     Trains a LightGBM Regressor using 5-fold cross-validation and returns the trained model.
     """
-    # Conservative hyperparameters to prevent overfitting on small n=181 dataset
-    model = lgb.LGBMRegressor(
-        n_estimators=80,
-        learning_rate=0.04,
-        max_depth=3,
-        num_leaves=7,
-        min_child_samples=4,
-        random_state=42,
-        verbosity=-1
-    )
+    model = create_regressor()
     
     # 5-Fold Cross Validation
     kf = KFold(n_splits=5, shuffle=True, random_state=42)
@@ -57,7 +51,7 @@ def train_and_evaluate(X: pd.DataFrame, y: np.ndarray, target_name: str) -> lgb.
         y_train, y_val = y[train_idx], y[val_idx]
         
         # Clone model configuration for this fold
-        fold_model = lgb.LGBMRegressor(**model.get_params())
+        fold_model = create_regressor()
         fold_model.fit(X_train, y_train)
         
         preds = fold_model.predict(X_val)
@@ -73,8 +67,29 @@ def train_and_evaluate(X: pd.DataFrame, y: np.ndarray, target_name: str) -> lgb.
 
 
 def main() -> None:
-    logger.info(f"Loading embedding dataset from {DATASET_PATH}...")
-    data = load_data(DATASET_PATH)
+    dataset_path = (
+        ANNOTATED_DATASET_PATH
+        if ANNOTATED_DATASET_PATH.exists()
+        else DEFAULT_DATASET_PATH
+    )
+    logger.info("Loading embedding dataset from %s...", dataset_path)
+    data = load_data(dataset_path)
+    try:
+        report = validate_records(data, require_targets=True)
+    except DatasetValidationError as exc:
+        logger.error(str(exc))
+        raise
+    logger.info(
+        "Validated %d records with %d embeddings. Zero-label counts: %s",
+        report.record_count,
+        report.valid_embedding_count,
+        report.zero_target_counts,
+    )
+    if any(report.zero_target_counts.values()):
+        logger.warning(
+            "Excluding %d all-zero records as unlabeled placeholders.",
+            sum(is_unlabeled_record(record) for record in data),
+        )
     
     logger.info("Preprocessing records into features...")
     X, y_overall, y_novelty, y_rigor, y_impact = build_dataset(data)

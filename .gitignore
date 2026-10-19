@@ -16,4 +16,9 @@ env/
 *.log
 
 # Streamlit configuration and run cache
-.streamlit/
+.streamlit/*
+!.streamlit/config.toml
+
+# Local human annotations and generated training datasets
+data/annotations.json
+data/annotated_embeddingdataset.json

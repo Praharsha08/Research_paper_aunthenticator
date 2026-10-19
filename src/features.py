@@ -8,6 +8,8 @@ from typing import List, Dict, Any, Tuple
 import pandas as pd
 import numpy as np
 
+from src.data_validation import is_unlabeled_record
+
 logger = logging.getLogger(__name__)
 
 
@@ -76,7 +78,10 @@ def clean_abstract(text: str) -> str:
     return text[:1500].strip()
 
 
-def build_dataset(data: List[Dict[str, Any]]) -> Tuple[pd.DataFrame, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def build_dataset(
+    data: List[Dict[str, Any]],
+    categories: List[str] | None = None,
+) -> Tuple[pd.DataFrame, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Constructs the feature matrix and target arrays from raw records for model training.
 
@@ -97,11 +102,15 @@ def build_dataset(data: List[Dict[str, Any]]) -> Tuple[pd.DataFrame, np.ndarray,
     y_impact = []
     
     # Pre-load categories to align pandas category codes
-    all_categories = load_categories()
+    all_categories = categories if categories is not None else load_categories()
 
     for record in data:
         # Require embeddings and manual score for training
-        if record.get("text_embedding") is None or record.get("manual_score") is None:
+        if (
+            record.get("text_embedding") is None
+            or record.get("manual_score") is None
+            or is_unlabeled_record(record)
+        ):
             continue
             
         # Scalars
